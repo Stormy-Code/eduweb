@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="100" fill="#0f0f11"/>
+  <g fill="#f59e0b">
+    <!-- Dot -->
+    <circle cx="140" cy="256" r="40"/>
+    <!-- Dash -->
+    <rect x="220" y="216" width="152" height="80" rx="40"/>
+  </g>
+</svg>

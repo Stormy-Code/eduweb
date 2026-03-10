@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Encode, decode, and learn Morse code with audio playback, practice drills, and progress tracking. Free online Morse code translator and trainer.">
+  <meta name="keywords" content="morse code, encoder, decoder, translator, practice, learn, ham radio, CW">
+  <meta name="author" content="Morse Code App">
+  <meta name="theme-color" content="#f59e0b">
+  
+  <!-- PWA -->
+  <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  
+  <title>Morse Code — Encode, Learn &amp; Practice</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Outfit:wght@300;400;500;600&family=Playfair+Display:wght@500;600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <h1 class="logo">Morse Code</h1>
+      <p class="tagline">Encode · Learn · Master</p>
+      <div class="header-actions">
+        <button type="button" class="btn btn-ghost help-btn" id="help-btn" aria-label="Help">?</button>
+        <button type="button" class="btn btn-ghost stats-header-btn" id="stats-header-btn" aria-label="View Stats" title="Your Progress">
+          <span class="streak-badge" id="streak-badge" hidden>0</span>
+          📊
+        </button>
+        <button type="button" class="theme-toggle" aria-label="Toggle light/dark mode">
+          <span class="theme-icon sun" aria-hidden="true">☀</span>
+          <span class="theme-icon moon" aria-hidden="true">☽</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main">
+      <div class="tabs" role="tablist" aria-label="Morse code tools">
+        <button type="button" class="tab active" role="tab" id="tab-encode" aria-selected="true" aria-controls="panel-encode" tabindex="0" data-tab="encode">Encode</button>
+        <button type="button" class="tab" role="tab" id="tab-decode" aria-selected="false" aria-controls="panel-decode" tabindex="-1" data-tab="decode">Decode</button>
+        <button type="button" class="tab" role="tab" id="tab-practice" aria-selected="false" aria-controls="panel-practice" tabindex="-1" data-tab="practice">Practice</button>
+        <button type="button" class="tab" role="tab" id="tab-reference" aria-selected="false" aria-controls="panel-reference" tabindex="-1" data-tab="reference">Reference</button>
+      </div>
+
+      <!-- ENCODE PANEL -->
+      <section class="panel active" id="panel-encode" role="tabpanel" aria-labelledby="tab-encode">
+        <div class="input-group">
+          <label for="text-input" class="sr-only">Type your message</label>
+          <textarea
+            id="text-input"
+            class="text-input"
+            placeholder="Type your message..."
+            maxlength="500"
+            rows="4"
+          ></textarea>
+          <div class="input-meta">
+            <span id="char-count">0</span> / 500
+          </div>
+        </div>
+
+        <!-- Preset Packs -->
+        <div class="presets-section">
+          <div class="presets-tabs" id="preset-tabs"></div>
+          <div class="presets-row" id="presets-row"></div>
+        </div>
+
+        <div class="morse-preview-wrap">
+          <div class="morse-preview" id="morse-preview" aria-live="polite">
+            <span class="morse-placeholder">Morse code will appear here</span>
+          </div>
+          <button type="button" class="btn btn-secondary copy-morse-btn" id="copy-morse-btn" disabled title="Copy Morse code">
+            <span class="btn-icon">⎘</span>
+            Copy
+          </button>
+        </div>
+
+        <div class="waveform-wrap" id="waveform-wrap" hidden>
+          <canvas class="waveform-canvas" id="waveform-canvas"></canvas>
+          <button type="button" class="btn btn-ghost waveform-export-btn" id="waveform-export-btn" title="Export waveform as PNG">
+            📷
+          </button>
+        </div>
+
+        <!-- Audio Controls -->
+        <details class="controls-section" open>
+          <summary class="controls-summary">Audio Settings</summary>
+          <div class="controls">
+            <div class="control-group">
+              <label for="wpm-slider">Speed (WPM)</label>
+              <div class="slider-row">
+                <input type="range" id="wpm-slider" min="5" max="35" value="15">
+                <span id="wpm-value">15</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="freq-slider">Frequency (Hz)</label>
+              <div class="slider-row">
+                <input type="range" id="freq-slider" min="400" max="1000" value="600" step="25">
+                <span id="freq-value">600</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="vol-slider">Volume</label>
+              <div class="slider-row">
+                <input type="range" id="vol-slider" min="0" max="100" value="100">
+                <span id="vol-value">100</span>
+              </div>
+            </div>
+            <div class="control-group">
+              <label for="audio-profile">Sound Profile</label>
+              <select id="audio-profile" class="select-input">
+                <option value="clean">Clean Tone</option>
+                <option value="radio">Radio Style</option>
+                <option value="hamRadio">HAM Radio</option>
+                <option value="telegraph">Telegraph</option>
+                <option value="soft">Soft Tone</option>
+                <option value="cw" selected>CW Operator</option>
+                <option value="harsh">Harsh</option>
+              </select>
+            </div>
+            <div class="control-group control-toggle">
+              <input type="checkbox" id="farnsworth">
+              <label for="farnsworth">Farnsworth spacing</label>
+              <span class="control-desc">Slower spaces for learning</span>
+            </div>
+            <div class="control-group control-toggle">
+              <input type="checkbox" id="loop-playback">
+              <label for="loop-playback">Loop playback</label>
+              <span class="control-desc">Repeat continuously</span>
+            </div>
+          </div>
+        </details>
+
+        <div class="input-group history-wrap">
+          <button type="button" class="btn btn-ghost" id="history-btn">History</button>
+          <div class="history-dropdown" id="history-dropdown" hidden></div>
+        </div>
+
+        <div class="actions">
+          <button type="button" class="btn btn-primary" id="play-btn" disabled>
+            <span class="btn-icon" aria-hidden="true">▶</span>
+            <span class="btn-text">Play</span>
+          </button>
+          <div class="export-format">
+            <input type="radio" name="export-format" id="export-mp3" value="mp3" checked>
+            <label for="export-mp3">MP3</label>
+            <input type="radio" name="export-format" id="export-wav" value="wav">
+            <label for="export-wav">WAV</label>
+          </div>
+          <button type="button" class="btn btn-secondary" id="download-btn" disabled>
+            <span class="btn-icon">↓</span>
+            Download
+          </button>
+          <button type="button" class="btn btn-secondary" id="share-btn" disabled>
+            <span class="btn-icon">⎘</span>
+            Share
+          </button>
+          <button type="button" class="btn btn-secondary" id="qr-btn" disabled title="Generate QR Code">
+            <span class="btn-icon">▣</span>
+            QR
+          </button>
+        </div>
+      </section>
+
+      <!-- DECODE PANEL -->
+      <section class="panel" id="panel-decode" role="tabpanel" aria-labelledby="tab-decode" hidden>
+        <div class="input-group">
+          <label for="morse-input" class="sr-only">Morse code to decode</label>
+          <textarea
+            id="morse-input"
+            class="text-input morse-input"
+            placeholder="Enter Morse code (· − or . -) Use / for word space..."
+            rows="4"
+          ></textarea>
+        </div>
+        <div class="decode-result" id="decode-result" aria-live="polite">
+          <span class="morse-placeholder">Decoded text will appear here</span>
+        </div>
+        <div class="decode-actions">
+          <button type="button" class="btn btn-secondary" id="copy-decoded-btn" disabled>
+            <span class="btn-icon">⎘</span>
+            Copy Text
+          </button>
+          <button type="button" class="btn btn-secondary" id="play-decoded-btn" disabled>
+            <span class="btn-icon">▶</span>
+            Play Decoded
+          </button>
+        </div>
+      </section>
+
+      <!-- PRACTICE PANEL -->
+      <section class="panel" id="panel-practice" role="tabpanel" aria-labelledby="tab-practice" hidden>
+        <!-- Practice Setup -->
+        <div class="practice-setup" id="practice-setup">
+          <h2 class="practice-title">Practice Mode</h2>
+          <p class="practice-subtitle">Improve your Morse code skills with interactive drills</p>
+          
+          <div class="practice-options">
+            <div class="option-group">
+              <label for="practice-difficulty">Difficulty</label>
+              <select id="practice-difficulty" class="select-input">
+                <option value="beginner">Beginner (Common Letters)</option>
+                <option value="intermediate" selected>Intermediate (All Letters)</option>
+                <option value="advanced">Advanced (Letters + Numbers)</option>
+                <option value="expert">Expert (All Characters)</option>
+              </select>
+            </div>
+            
+            <div class="option-group">
+              <label for="practice-drill-type">Drill Type</label>
+              <select id="practice-drill-type" class="select-input">
+                <option value="characters">Single Characters</option>
+                <option value="words">Common Words</option>
+                <option value="callsigns">Call Signs</option>
+                <option value="sentences">Sentences</option>
+                <option value="listenType">Listen &amp; Type</option>
+              </select>
+            </div>
+            
+            <div class="option-group">
+              <label for="practice-wpm">Speed (WPM)</label>
+              <div class="slider-row">
+                <input type="range" id="practice-wpm" min="5" max="30" value="12">
+                <span id="practice-wpm-value">12</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="weak-chars-section" id="weak-chars-section" hidden>
+            <h3 class="weak-chars-title">Characters to Practice</h3>
+            <p class="weak-chars-desc">These characters need more practice based on your history:</p>
+            <div class="weak-chars-list" id="weak-chars-list"></div>
+          </div>
+          
+          <button type="button" class="btn btn-primary btn-large" id="start-practice-btn">
+            Start Practice
+          </button>
+        </div>
+
+        <!-- Practice Session -->
+        <div class="practice-session" id="practice-session" hidden>
+          <div class="practice-stats-bar">
+            <div class="stat-item">
+              <span class="stat-label">Correct</span>
+              <span class="stat-value" id="practice-correct">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Wrong</span>
+              <span class="stat-value stat-wrong" id="practice-wrong">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Streak</span>
+              <span class="stat-value stat-streak" id="practice-streak">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Accuracy</span>
+              <span class="stat-value" id="practice-accuracy">0%</span>
+            </div>
+          </div>
+
+          <div class="practice-prompt" id="practice-prompt">
+            <div class="prompt-char" id="prompt-char"></div>
+            <div class="prompt-morse" id="prompt-morse"></div>
+          </div>
+
+          <div class="practice-input-wrap">
+            <input 
+              type="text" 
+              id="practice-input" 
+              class="practice-input" 
+              placeholder="Type your answer..."
+              autocomplete="off"
+              autocapitalize="characters"
+            >
+            <button type="button" class="btn btn-ghost" id="practice-replay-btn" title="Replay audio">
+              🔊
+            </button>
+          </div>
+
+          <div class="practice-feedback" id="practice-feedback" hidden>
+            <span class="feedback-icon"></span>
+            <span class="feedback-text"></span>
+          </div>
+
+          <div class="practice-actions">
+            <button type="button" class="btn btn-secondary" id="skip-btn">Skip</button>
+            <button type="button" class="btn btn-primary" id="submit-answer-btn">Submit</button>
+            <button type="button" class="btn btn-ghost" id="end-practice-btn">End Session</button>
+          </div>
+        </div>
+
+        <!-- Practice Results -->
+        <div class="practice-results" id="practice-results" hidden>
+          <h2 class="results-title">Session Complete!</h2>
+          
+          <div class="results-summary">
+            <div class="result-stat">
+              <span class="result-value" id="result-correct">0</span>
+              <span class="result-label">Correct</span>
+            </div>
+            <div class="result-stat">
+              <span class="result-value" id="result-total">0</span>
+              <span class="result-label">Total</span>
+            </div>
+            <div class="result-stat result-highlight">
+              <span class="result-value" id="result-accuracy">0%</span>
+              <span class="result-label">Accuracy</span>
+            </div>
+            <div class="result-stat">
+              <span class="result-value" id="result-streak">0</span>
+              <span class="result-label">Best Streak</span>
+            </div>
+          </div>
+
+          <div class="results-actions">
+            <button type="button" class="btn btn-primary" id="practice-again-btn">Practice Again</button>
+            <button type="button" class="btn btn-secondary" id="view-stats-btn">View Progress</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- REFERENCE PANEL -->
+      <section class="panel" id="panel-reference" role="tabpanel" aria-labelledby="tab-reference" hidden>
+        <div class="reference-search">
+          <input type="text" id="ref-search" class="text-input" placeholder="Search characters...">
+        </div>
+        <p class="ref-section-title">Letters</p>
+        <div class="reference-grid" id="ref-letters"></div>
+        <p class="ref-section-title">Numbers</p>
+        <div class="reference-grid" id="ref-numbers"></div>
+        <p class="ref-section-title">Punctuation</p>
+        <div class="reference-grid" id="ref-punctuation"></div>
+      </section>
+    </main>
+
+    <!-- HELP MODAL -->
+    <div class="modal-overlay" id="help-modal" hidden>
+      <div class="modal" role="dialog" aria-labelledby="modal-title">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modal-title">Help</h2>
+          <button type="button" class="modal-close" id="modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <h3>How to use</h3>
+          <p>Type your message in the Encode tab. The Morse code appears below. Use Play to hear it, Download to save as MP3 or WAV, and Share to send to others.</p>
+          
+          <h3>Practice Mode</h3>
+          <p>Go to the Practice tab to improve your skills. Choose from different drill types: single characters, words, call signs, or listen-and-type exercises. Your progress is tracked automatically.</p>
+          
+          <h3>Keyboard shortcuts</h3>
+          <ul>
+            <li><kbd>Ctrl</kbd>+<kbd>Enter</kbd> or <kbd>Cmd</kbd>+<kbd>Enter</kbd> — Play / Stop</li>
+            <li><kbd>Esc</kbd> — Stop playback</li>
+            <li><kbd>Enter</kbd> — Submit answer (in Practice mode)</li>
+          </ul>
+          
+          <h3>Decode</h3>
+          <p>Paste Morse code (dots and dashes) in the Decode tab. Use <code>·</code> or <code>.</code> for dots, <code>−</code> or <code>-</code> for dashes. Use <code>/</code> or multiple spaces for word breaks.</p>
+          
+          <h3>Audio Profiles</h3>
+          <ul>
+            <li><strong>Clean Tone</strong> — Pure sine wave</li>
+            <li><strong>Radio Style</strong> — Simulated radio with slight noise</li>
+            <li><strong>Telegraph</strong> — Sharp square wave beeps</li>
+            <li><strong>CW Operator</strong> — Classic amateur radio sound</li>
+          </ul>
+          
+          <h3>Reference</h3>
+          <p>Click any character in the Reference tab to insert it into your message. Use the search box to quickly find specific characters.</p>
+          
+          <h3>Offline Mode</h3>
+          <p>This app works offline! Install it to your device for the best experience.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- STATS MODAL -->
+    <div class="modal-overlay" id="stats-modal" hidden>
+      <div class="modal modal-large" role="dialog" aria-labelledby="stats-modal-title">
+        <div class="modal-header">
+          <h2 class="modal-title" id="stats-modal-title">Your Progress</h2>
+          <button type="button" class="modal-close" id="stats-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div class="stats-overview">
+            <div class="stat-card">
+              <span class="stat-card-value" id="stat-sessions">0</span>
+              <span class="stat-card-label">Sessions</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-value" id="stat-time">0m</span>
+              <span class="stat-card-label">Practice Time</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-value" id="stat-accuracy">0%</span>
+              <span class="stat-card-label">Accuracy</span>
+            </div>
+            <div class="stat-card">
+              <span class="stat-card-value" id="stat-streak">0</span>
+              <span class="stat-card-label">Day Streak</span>
+            </div>
+          </div>
+
+          <div class="stats-section">
+            <h3>Characters to Practice</h3>
+            <div class="chars-grid" id="stats-weak-chars">
+              <p class="text-muted">Complete some practice sessions to see which characters need work.</p>
+            </div>
+          </div>
+
+          <div class="stats-section">
+            <h3>Achievements</h3>
+            <div class="achievements-grid" id="achievements-grid"></div>
+          </div>
+
+          <div class="stats-actions">
+            <button type="button" class="btn btn-ghost btn-danger" id="reset-stats-btn">Reset All Progress</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- QR MODAL -->
+    <div class="modal-overlay" id="qr-modal" hidden>
+      <div class="modal" role="dialog" aria-labelledby="qr-modal-title">
+        <div class="modal-header">
+          <h2 class="modal-title" id="qr-modal-title">Share via QR Code</h2>
+          <button type="button" class="modal-close" id="qr-modal-close" aria-label="Close">&times;</button>
+        </div>
+        <div class="modal-body qr-modal-body">
+          <div class="qr-container" id="qr-container"></div>
+          <p class="qr-text" id="qr-text"></p>
+          <div class="qr-actions">
+            <button type="button" class="btn btn-primary" id="download-qr-btn">Download QR</button>
+            <button type="button" class="btn btn-secondary" id="copy-link-btn">Copy Link</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-container" id="toast-container"></div>
+
+    <div class="loading-overlay" id="loading-overlay" aria-hidden="true" hidden>
+      <div class="spinner" aria-hidden="true"></div>
+      <p id="loading-text">Generating...</p>
+    </div>
+
+    <!-- Install prompt -->
+    <div class="install-prompt" id="install-prompt" hidden>
+      <p>Install this app for offline access</p>
+      <button type="button" class="btn btn-primary btn-small" id="install-btn">Install</button>
+      <button type="button" class="btn btn-ghost btn-small" id="dismiss-install-btn">Later</button>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+  <script type="module" src="js/app.js"></script>
+  
+  <!-- Service Worker Registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/sw.js')
+          .then(reg => console.log('SW registered'))
+          .catch(err => console.log('SW registration failed:', err));
+      });
+    }
+  </script>
+</body>
+</html>
