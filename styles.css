@@ -84,6 +84,7 @@ body {
   z-index: 1;
   padding: var(--space-3xl) 0 var(--space-2xl);
   text-align: center;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 .hero-eyebrow {
@@ -100,11 +101,19 @@ body {
   font-weight: 700;
   letter-spacing: -0.02em;
   line-height: 1.1;
-  margin-bottom: var(--space-md);
+  margin-bottom: var(--space-sm);
   background: linear-gradient(135deg, var(--color-text) 0%, var(--color-text-muted) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.hero-tagline {
+  font-size: clamp(1rem, 2.5vw, 1.25rem);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  color: var(--color-accent);
+  margin-bottom: var(--space-md);
 }
 
 .hero-subtitle {
