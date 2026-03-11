@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Interactive thermodynamics simulator demonstrating radiative heat transfer, thermal mass, and survival physics.">
+  <title>Fire Lab — Heat & Physics Simulator</title>
+  <link rel="stylesheet" href="style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+        "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+      }
+    }
+  </script>
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-content">
+      <h1 class="app-title">Fire Lab</h1>
+      <p class="app-subtitle">Heat Transfer & Thermal Physics Simulator</p>
+    </div>
+    <div class="weather-status" id="weatherStatus">
+      <span class="weather-icon" aria-hidden="true">☀</span>
+      <span class="weather-text" id="weatherText">Fetching weather...</span>
+    </div>
+  </header>
+
+  <main class="app-main">
+    <aside class="control-panel" aria-label="Simulation Controls">
+      <section class="panel-section">
+        <h2 class="section-title">Fire Properties</h2>
+        <div class="control-group">
+          <label for="firePower">Fire Power</label>
+          <input type="range" id="firePower" min="1" max="20" value="8" step="0.5">
+          <output id="firePowerValue" for="firePower">8 kW</output>
+        </div>
+        <div class="control-group">
+          <label for="fireActive">Fire Active</label>
+          <input type="checkbox" id="fireActive" checked>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Thermal Battery (Wall)</h2>
+        <div class="control-group">
+          <label for="wallMaterial">Material</label>
+          <select id="wallMaterial">
+            <option value="log">Log Wall (Oak)</option>
+            <option value="stone">Stone</option>
+            <option value="brick">Brick</option>
+            <option value="aluminum">Aluminum Sheet</option>
+          </select>
+        </div>
+        <div class="control-group">
+          <label for="wallThickness">Thickness</label>
+          <input type="range" id="wallThickness" min="0.05" max="0.5" value="0.15" step="0.01">
+          <output id="wallThicknessValue" for="wallThickness">0.15 m</output>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Environment</h2>
+        <div class="control-group">
+          <label for="ambientTemp">Ambient Temp</label>
+          <input type="range" id="ambientTemp" min="-20" max="35" value="5" step="1">
+          <output id="ambientTempValue" for="ambientTemp">5 °C</output>
+        </div>
+        <div class="control-group">
+          <label for="windSpeed">Wind Speed</label>
+          <input type="range" id="windSpeed" min="0" max="15" value="2" step="0.5">
+          <output id="windSpeedValue" for="windSpeed">2 m/s</output>
+        </div>
+        <div class="control-group">
+          <label for="humidity">Humidity</label>
+          <input type="range" id="humidity" min="10" max="100" value="60" step="5">
+          <output id="humidityValue" for="humidity">60%</output>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Simulation</h2>
+        <div class="control-group">
+          <label for="timeScale">Time Scale</label>
+          <input type="range" id="timeScale" min="1" max="120" value="1" step="1">
+          <output id="timeScaleValue" for="timeScale">1x</output>
+        </div>
+        <div class="control-group">
+          <label for="showHeatmap">Heatmap Overlay</label>
+          <input type="checkbox" id="showHeatmap">
+        </div>
+        <div class="button-row">
+          <button type="button" class="btn btn-primary" id="btnReset">Reset</button>
+          <button type="button" class="btn btn-secondary" id="btnExtinguish">Extinguish Fire</button>
+        </div>
+      </section>
+
+      <section class="panel-section">
+        <h2 class="section-title">Location (Weather)</h2>
+        <div class="control-group">
+          <label for="latitude">Latitude</label>
+          <input type="number" id="latitude" value="45.0" step="0.01" min="-90" max="90">
+        </div>
+        <div class="control-group">
+          <label for="longitude">Longitude</label>
+          <input type="number" id="longitude" value="15.0" step="0.01" min="-180" max="180">
+        </div>
+        <button type="button" class="btn btn-small" id="btnFetchWeather">Fetch Weather</button>
+        <button type="button" class="btn btn-small" id="btnUseGeolocation">Use My Location</button>
+      </section>
+    </aside>
+
+    <div class="simulation-container">
+      <div class="canvas-wrapper" id="canvasWrapper">
+        <div class="canvas-overlay" id="canvasOverlay">
+          <span class="drag-hint">Orbit: drag | Zoom: scroll | Click objects to select & drag</span>
+        </div>
+      </div>
+
+      <div class="metrics-panel" aria-label="Real-time Metrics">
+        <div class="metric-card">
+          <span class="metric-label">Fire Temperature</span>
+          <span class="metric-value" id="metricFireTemp">—</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Wall Temperature</span>
+          <span class="metric-value" id="metricWallTemp">—</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Person Heat Gain</span>
+          <span class="metric-value" id="metricPersonHeat">—</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Radiative Flux</span>
+          <span class="metric-value" id="metricRadiative">—</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Convective Loss</span>
+          <span class="metric-value" id="metricConvective">—</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Wall Stored Energy</span>
+          <span class="metric-value" id="metricWallEnergy">—</span>
+        </div>
+        <div class="metric-card metric-card--wide">
+          <span class="metric-label">View Factors</span>
+          <span class="metric-value metric-value--small" id="metricViewFactors">F_fp: — | F_fw: — | F_wp: —</span>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">Sim Time</span>
+          <span class="metric-value" id="metricSimTime">0:00</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="app-footer">
+    <p>Physics: Stefan-Boltzmann radiation, transient conduction, convection approximations. Drag entities to explore geometry effects.</p>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
