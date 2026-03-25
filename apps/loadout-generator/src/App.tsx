@@ -71,6 +71,8 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generationCount, setGenerationCount] = useState<number>(0);
+  const geminiApiKey =
+    (process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
 
   // Load saved loadouts and generation count on mount
   useEffect(() => {
@@ -107,7 +109,13 @@ export default function App() {
     setCurrentLoadout(null);
 
     try {
-      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      if (!geminiApiKey) {
+        throw new Error(
+          'Nedostaje API ključ. Postavite GEMINI_API_KEY u Vercel Environment Variables i redeployajte aplikaciju.'
+        );
+      }
+
+      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
       
       const responseSchema = {
         type: Type.OBJECT,
@@ -148,7 +156,7 @@ export default function App() {
       };
 
       const response = await ai.models.generateContent({
-        model: 'gemini-3.1-pro-preview',
+        model: 'gemini-2.5-flash',
         contents: `Korisnik traži opremu za sljedeću situaciju: "${prompt}". 
         Generiraj premium, visoko optimiziran popis opreme (loadout) za outdoor, bushcraft, preživljavanje ili EDC.
         Budi vrlo specifičan oko modela opreme (npr. umjesto "Nož" napiši "Morakniv Garberg" ili "Fallkniven F1" ako odgovara situaciji).
@@ -178,7 +186,25 @@ export default function App() {
       }
     } catch (err) {
       console.error(err);
-      setError("Došlo je do pogreške prilikom generiranja opreme. Molimo pokušajte ponovno.");
+      const message = err instanceof Error ? err.message : String(err);
+      const lower = message.toLowerCase();
+
+      if (lower.includes('api ključ') || lower.includes('api key')) {
+        setError(message);
+      } else if (
+        lower.includes('403') ||
+        lower.includes('unauthorized') ||
+        lower.includes('forbidden') ||
+        lower.includes('permission')
+      ) {
+        setError(
+          'Autorizacija nije uspjela. API ključ je vjerojatno neispravan ili ograničen za ovu domenu.'
+        );
+      } else if (lower.includes('429') || lower.includes('quota') || lower.includes('rate')) {
+        setError('Dosegnut je limit poziva API-ja. Pokušajte ponovno malo kasnije.');
+      } else {
+        setError('Došlo je do pogreške pri generiranju. Provjerite API ključ i pokušajte ponovno.');
+      }
     } finally {
       setIsGenerating(false);
     }
