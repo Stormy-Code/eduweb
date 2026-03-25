@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "cd apps/loadout-generator && npm ci",
+  "buildCommand": "cd apps/loadout-generator && npm run build",
+  "outputDirectory": ".",
+  "redirects": [
+    {
+      "source": "/apps/loadout-generator",
+      "destination": "/apps/loadout-generator/dist/"
+    },
+    {
+      "source": "/apps/loadout-generator/",
+      "destination": "/apps/loadout-generator/dist/"
+    }
+  ]
+}
