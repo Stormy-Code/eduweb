@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { GoogleGenAI, Type } from '@google/genai';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Compass, 
@@ -71,8 +70,6 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [generationCount, setGenerationCount] = useState<number>(0);
-  const geminiApiKey =
-    (process.env.GEMINI_API_KEY || import.meta.env.VITE_GEMINI_API_KEY || '').trim();
 
   // Load saved loadouts and generation count on mount
   useEffect(() => {
@@ -109,87 +106,40 @@ export default function App() {
     setCurrentLoadout(null);
 
     try {
-      if (!geminiApiKey) {
-        throw new Error(
-          'Nedostaje API ključ. Postavite GEMINI_API_KEY u Vercel Environment Variables i redeployajte aplikaciju.'
-        );
-      }
-
-      const ai = new GoogleGenAI({ apiKey: geminiApiKey });
-      
-      const responseSchema = {
-        type: Type.OBJECT,
-        properties: {
-          title: { type: Type.STRING, description: "Kratki, upečatljivi naslov opreme (npr. Zimski Bushcraft Velebit)" },
-          description: { type: Type.STRING, description: "Kratki opis i filozofija za ovu specifičnu opremu" },
-          totalWeight: { type: Type.STRING, description: "Procijenjena ukupna težina (npr. '12.5 kg')" },
-          categories: {
-            type: Type.ARRAY,
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                name: { type: Type.STRING, description: "Ime kategorije (npr. Sklonište, Vatra, Alati, Prva pomoć, Voda, Hrana)" },
-                items: {
-                  type: Type.ARRAY,
-                  items: {
-                    type: Type.OBJECT,
-                    properties: {
-                      name: { type: Type.STRING, description: "Naziv predmeta (npr. Silky Gomboy 240)" },
-                      description: { type: Type.STRING, description: "Zašto je ovo odabrano i specifikacije" },
-                      weight: { type: Type.STRING, description: "Težina predmeta (npr. '450 g')" },
-                      importance: { type: Type.STRING, description: "Visoka, Srednja ili Niska" }
-                    },
-                    required: ["name", "description", "weight", "importance"]
-                  }
-                }
-              },
-              required: ["name", "items"]
-            }
-          },
-          tips: {
-            type: Type.ARRAY,
-            items: { type: Type.STRING },
-            description: "3-5 kratkih, stručnih savjeta za preživljavanje/outdoor za ovu specifičnu situaciju"
-          }
+      const response = await fetch('/api/generate-loadout', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        required: ["title", "description", "totalWeight", "categories", "tips"]
-      };
-
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: `Korisnik traži opremu za sljedeću situaciju: "${prompt}". 
-        Generiraj premium, visoko optimiziran popis opreme (loadout) za outdoor, bushcraft, preživljavanje ili EDC.
-        Budi vrlo specifičan oko modela opreme (npr. umjesto "Nož" napiši "Morakniv Garberg" ili "Fallkniven F1" ako odgovara situaciji).
-        Pazi na realistične težine.
-        Odgovaraj ISKLJUČIVO na HRVATSKOM jeziku.`,
-        config: {
-          systemInstruction: "Ti si vrhunski stručnjak za outdoor, preživljavanje, bushcraft i EDC opremu. Tvoj zadatak je generirati premium, visoko optimizirane popise opreme (loadouts) na temelju korisničkog unosa. Odgovaraj isključivo na HRVATSKOM jeziku. Generiraj JSON.",
-          responseMimeType: "application/json",
-          responseSchema: responseSchema,
-          temperature: 0.7,
-        }
+        body: JSON.stringify({ prompt: prompt.trim() }),
       });
 
-      if (response.text) {
-        const data = JSON.parse(response.text);
-        setCurrentLoadout({
-          ...data,
-          id: crypto.randomUUID(),
-          createdAt: Date.now(),
-        });
-        
-        const newCount = generationCount + 1;
-        setGenerationCount(newCount);
-        localStorage.setItem('teren_generation_count', newCount.toString());
-      } else {
-        throw new Error("Prazan odgovor od AI-a.");
+      const payload = await response.json();
+
+      if (!response.ok) {
+        throw new Error(payload?.error || 'Greška servera pri generiranju.');
       }
+
+      const data = payload?.loadout;
+      if (!data) {
+        throw new Error('Prazan odgovor od AI servisa.');
+      }
+
+      setCurrentLoadout({
+        ...data,
+        id: crypto.randomUUID(),
+        createdAt: Date.now(),
+      });
+
+      const newCount = generationCount + 1;
+      setGenerationCount(newCount);
+      localStorage.setItem('teren_generation_count', newCount.toString());
     } catch (err) {
       console.error(err);
       const message = err instanceof Error ? err.message : String(err);
       const lower = message.toLowerCase();
 
-      if (lower.includes('api ključ') || lower.includes('api key')) {
+      if (lower.includes('api ključ') || lower.includes('api key') || lower.includes('nedostaje konfiguracija')) {
         setError(message);
       } else if (
         lower.includes('403') ||
